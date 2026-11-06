@@ -1,10 +1,11 @@
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
+import Database from 'better-sqlite3';
+import path from 'path';
 
-dotenv.config();
+// Creates a local file named banking.db in your project root
+const dbPath = path.resolve(__dirname, '../../banking.db');
 
-export const db = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://analyst_user:analyst_pass@localhost:5432/banking_db',
-  statement_timeout: 5000, // 5 second hard cutoff for safe query execution
-  connectionTimeoutMillis: 2000,
-});
+export const db = new Database(dbPath, { verbose: console.log });
+
+// Enable Write-Ahead Logging and foreign key constraints for SQLite safety
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');

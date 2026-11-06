@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { LLMService } from '../services/llmService';
 import { SqlSanitizer } from '../services/sqlSanitizer';
-import { db } from '../config/database'; // Database connection instance
+import { db } from '../config/database';
 
 const llmService = new LLMService();
 
@@ -15,40 +15,52 @@ export async function handleAnalystQuery(req: Request, res: Response): Promise<v
   }
 
   try {
-    // 1. Generate query from LLM
+    // 1. Generate query strategy
     const llmOutput = await llmService.generateQueryAndViz(question);
 
     // 2. Validate & Sanitize SQL
     const guardrailCheck = SqlSanitizer.validateAndSanitize(llmOutput.sql);
     if (!guardrailCheck.isValid) {
       res.status(422).json({
-        error: 'Generated SQL violates security guardrails.',
+        error: 'Generated query violates security guardrails.',
         details: guardrailCheck.reason
       });
       return;
     }
 
-    // 3. Execute safe query
-    const dbResult = await db.query(guardrailCheck.sanitizedSql);
+    // 3. Execute query safely against SQLite
+    const stmt = db.prepare(guardrailCheck.sanitizedSql);
+    const rows = stmt.all() as Record<string, unknown>[];
 
-    // 4. Extract schema metadata
-    const columns = dbResult.fields ? dbResult.fields.map(f => ({ name: f.name, type: f.dataTypeID.toString() })) : [];
+    // 4. Build column schema metadata
+    const columns = rows.length > 0 
+      ? Object.keys(rows[0]).map((name) => ({ name, type: 'TEXT' })) 
+      : [];
 
-    res.json({
+    // Format final KPI value if rows contain aggregated numeric totals
+    let vizConfig = { ...llmOutput.visualization };
+    if (vizConfig.type === 'kpi' && rows.length > 0) {
+      const firstVal = Object.values(rows[0])[0];
+      if (typeof firstVal === 'number') {
+        vizConfig.kpiValue = `$${firstVal.toLocaleString()}`;
+      }
+    }
+
+    res.status(200).json({
       queryId: crypto.randomUUID(),
       userQuestion: question,
       generatedSql: guardrailCheck.sanitizedSql,
       summary: llmOutput.summary,
       columns,
-      rows: dbResult.rows,
-      visualization: llmOutput.visualization,
+      rows,
+      visualization: vizConfig,
       executionTimeMs: Date.now() - startTime
     });
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+  } catch (err: any) {
+    console.error('Backend execution error:', err);
     res.status(500).json({
-      error: 'Failed to process natural language database query.',
-      details: errorMessage
+      error: 'Failed to execute query.',
+      details: err?.message || 'Internal database error.'
     });
   }
 }

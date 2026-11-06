@@ -1,48 +1,48 @@
-import { db } from '../config/database.ts';
+import { db } from '../config/database';
 
-async function seedDatabase() {
-  console.log('Seeding banking datasets...');
+function seedDatabase() {
+  console.log('Seeding SQLite banking database...');
   try {
-    await db.query(`
+    db.exec(`
       DROP TABLE IF EXISTS transactions;
       DROP TABLE IF EXISTS applications;
       DROP TABLE IF EXISTS customers;
       DROP TABLE IF EXISTS branches;
 
       CREATE TABLE branches (
-        id VARCHAR(50) PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        city VARCHAR(50) NOT NULL,
-        region VARCHAR(50) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        city TEXT NOT NULL,
+        region TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE customers (
-        id VARCHAR(50) PRIMARY KEY,
-        branch_id VARCHAR(50) REFERENCES branches(id),
-        full_name VARCHAR(100) NOT NULL,
-        segment VARCHAR(50) NOT NULL,
-        status VARCHAR(20) DEFAULT 'ACTIVE',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id TEXT PRIMARY KEY,
+        branch_id TEXT REFERENCES branches(id),
+        full_name TEXT NOT NULL,
+        segment TEXT NOT NULL,
+        status TEXT DEFAULT 'ACTIVE',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE applications (
-        id VARCHAR(50) PRIMARY KEY,
-        customer_id VARCHAR(50) REFERENCES customers(id),
-        product_type VARCHAR(50) NOT NULL,
-        status VARCHAR(20) NOT NULL,
-        requested_amount NUMERIC(15,2),
-        submitted_at TIMESTAMP NOT NULL
+        id TEXT PRIMARY KEY,
+        customer_id TEXT REFERENCES customers(id),
+        product_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        requested_amount REAL,
+        submitted_at TEXT NOT NULL
       );
 
       CREATE TABLE transactions (
-        id VARCHAR(50) PRIMARY KEY,
-        customer_id VARCHAR(50) REFERENCES customers(id),
-        channel VARCHAR(30) NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        type VARCHAR(10) NOT NULL,
-        amount NUMERIC(15,2) NOT NULL,
-        timestamp TIMESTAMP NOT NULL
+        id TEXT PRIMARY KEY,
+        customer_id TEXT REFERENCES customers(id),
+        channel TEXT NOT NULL,
+        category TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        timestamp TEXT NOT NULL
       );
 
       INSERT INTO branches (id, name, city, region) VALUES
@@ -68,11 +68,9 @@ async function seedDatabase() {
         ('t3', 'c2', 'POS', 'Groceries', 'DEBIT', 145.50, '2024-03-02 18:15:00'),
         ('t4', 'c4', 'Wire Transfer', 'Salary', 'CREDIT', 8500.00, '2024-03-03 09:00:00');
     `);
-    console.log('Database seeded successfully.');
+    console.log('SQLite database seeded successfully.');
   } catch (error) {
-    console.error('Failed to seed database:', error);
-  } finally {
-    await db.end();
+    console.error('Failed to seed SQLite database:', error);
   }
 }
 
