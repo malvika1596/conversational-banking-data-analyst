@@ -16,10 +16,12 @@ For backend: open new terminal and run following commands one by (it will run on
 npm install
 npm run db:seed
 npm run dev
+for tests: npm run test
 
 For frontend: open new terminal and run following commands one by (it will run on browser on http://localhost:3000)-
 npm install
 npm run dev
+for tests: npm run test
 
 
 
